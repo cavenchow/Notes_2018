@@ -1,0 +1,31 @@
+---
+title: "R Notebook 2018"
+output: html_notebook
+---
+
+##Intro to Bioconductor
+
+```{r eval = F}
+#source("https://www.bioconductor.org/biocLite.R")
+BiocManager::install()
+
+#Current Bioconductor version
+biocVersion()
+packageVersion()
+
+#All the loaded pkgs and their information.
+sessionInfo()
+
+biocValid()
+
+```
+
+##Role of S4 in Bioconductor
+
+```{r eval = F}
+#summary of accessors
+.S4methods(class = "name")
+
+
+```
+
