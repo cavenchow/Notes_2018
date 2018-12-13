@@ -23,9 +23,349 @@ biocValid()
 ##Role of S4 in Bioconductor
 
 ```{r eval = F}
-#summary of accessors
-.S4methods(class = "name")
+#summary of accessors, other specific accessors, from the list of 
+.S4methods(class = "BSgenome")
+showMethods(BSgenome)
 
+# Investigate about the a_genome using show()
+show(a_genome)
+
+# Check its main class
+class(a_genome)  # "BSgenome"
+
+# Check its other classes
+is(a_genome)  # "BSgenome", "GenomeDescription"
+
+# Is it an S4 representation?
+isS4(a_genome)  # TRUE
+
+#examples of accessors
+organism(a_genome)
+provider(a_genome)
+seqinfo(a_genome)
 
 ```
+##Genomic Datasets
+
+```{r Yeast, eval = F}
+install.packages("BSgenome.Scerevisiae.UCSC.sacCer3")
+library(BSgenome.Scerevisiae.UCSC.sacCer3)
+yeastGenome <- BSgenome.Scerevisiae.UCSC.sacCer3
+
+show(yeastGenome)
+
+# Get the head of seqnames and tail of seqlengths for yeastGenome
+head(seqnames(yeastGenome))
+tail(seqlengths(yeastGenome))
+
+# Partitioning the Yeast genome
+# Get the 100 to 150 bases of chrI chromosome
+getSeq(yeastGenome, names = "chrI", start = 100, end = 150)
+
+# explore the available genomes from this package: BSgenome
+available.genomes()
+```
+## Intro to Biostrings
+```{r Zika Virus data exploration}
+# Load packages
+library(Biostrings)
+
+# Check the alphabet of the zikaVirus
+alphabet(zikaVirus)
+
+# Check the alphabetFrequency of the zikaVirus
+alphabetFrequency(zikaVirus)
+
+# Check alphabet of the zikaVirus using baseOnly = TRUE
+alphabet(zikaVirus, baseOnly = TRUE)
+
+
+zikaVirus # list
+
+unlist(zikaVirus) # vector
+
+# transform DNA to RNA to AA
+# Unlist the set and select the first 21 letters as dna_seq
+dna_seq <- subseq(unlist(zikaVirus), end = 21)
+
+# 1.1 Transcribe dna_seq as rna_seq
+rna_seq <- RNAString(dna_seq) 
+
+# 1.2 Translate rna_seq as aa_seq
+aa_seq <- translate(rna_seq)
+
+# 2.1 Translate dna_seq as aa_seq_2
+aa_seq_2 <- translate(dna_seq)
+
+length(zikv)
+
+# Check the width of zikaVirus and length of zikv
+zikv <- unlist(zikaVirus)
+width(zikaVirus) # list
+length(zikv) # vector
+
+
+# The reverse of zikv is
+reverse(zikv) # left to right
+
+# The complement of zikv is
+complement(zikv) # complement sequence
+
+# The reverse complement of zikv is
+reverseComplement(zikv) # reverse of complement seq
+
+```
+
+A palindromic sequence is a nucleic acid sequence on double-stranded DNA or RNA wherein reading 5' to 3' forward on one strand matches the sequence reading 5' to 3' on the complementary strand with which it forms a double helix
+
+```{r functions to compare sequences}
+
+# For Sets
+vmatchPattern(pattern = "ACATGGGCCTACCATGGGAG", 
+              subject = zikaVirus, max.mismatch = 1)
+# For single sequences
+matchPattern(pattern = "ACATGGGCCTACCATGGGAG", 
+              subject = zikv, max.mismatch = 1)
+
+# Find palindromes in zikv
+
+findPalindromes(zikv)
+
+```
+
+Now you will be able to look for the NS5 protein sequence in the Zika virus sequence.
+
+```{r}
+# print the rnaframesZikaSet 
+rnaframesZikaSet
+
+# translate all 6 reading frames 
+AAzika6F <- translate(rnaframesZikaSet)
+AAzika6F
+
+# Count the matches allowing 15 mistmatches
+#ns5 is protein sequence of NS5
+vcountPattern(pattern = ns5, subject = AAzika6F, max.mismatch = 15)
+
+# Select the frame that contains the match
+selectedSet <- AAzika6F[3]
+
+#Convert this frame into a single sequence
+selectedSeq <- unlist(selectedSet)
+```
+
+##IRanges and Genomic Structures
+
+To extract sequence intervals you use ranges. The Bioconductor package IRanges comes in handy with its function IRanges(), which is a vector representation of a sequence range used to facilitate subsetting and annotation.
+
+```{r}
+# load package IRanges
+library(IRanges)
+
+# start vector 1 to 5 and end 100 
+IRnum1 <- IRanges(start = c(1:5), end = 100)
+
+# end 100 and width 89 and 10
+IRnum2 <- IRanges(width = c(89, 10), end = 100)
+
+# logical argument start = Rle(c(F, T, T, T, F, T, T, T))
+IRlog1 <- IRanges(start = Rle(c(F, T, T, T, F, T, T, T)))
+
+# Printing objects in a list
+print(list(IRnum1 = IRnum1, IRnum2 = IRnum2, IRlog1 = IRlog1)) 
+```
+
+Comparing genomic sequence intervals to study gene of interest. 
+GRanges objects are like tibbles. 
+
+Use the `GRanges` object called `myGR` to investigate more of it using accessors methods. You can check the `GRanges` object's characteristics like the name of each chromosome, the number of sequences, the names of each sequence, information about strand, score, length and more.
+
+```{r}
+granges_df <- GRanges(df)
+# list of accessors
+methods(class = "GRanges")
+
+```
+
+Extracting function genes().
+Similar functions to explore are transcripts(), cds() and promoters()
+
+```{r}
+# load human reference genome hg38
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+
+# assign hg38 to hg, then print it
+hg <- TxDb.Hsapiens.UCSC.hg38.knownGene
+
+# filter1: extract all the genes in chromosome X as hg_chrXg, then print it
+hg_chrXg <- genes(hg, filter = list(tx_chrom = c("chrX")))
+
+# filter2: extract all positive stranded genes in chromosome X as hg_chrXgp, then sort it
+hg_chrXgp <- genes(hg, filter = list(tx_chrom = c("chrX"), tx_strand = "+"))
+```
+
+`GRangesLists` also come with useful accessor functions; almost all the accessors from `IRanges` and `GRanges` are reused, but the result will be a list instead. You can find accessors using the function `methods(class = "GRangesList")`.
+
+```{r}
+methods(class = "GRangesList")
+
+```
+Now that you know that there is an overlap between chromosome X and the gene ABCD1, let's find its gene_id and its location, also called locus.
+```{r}
+# Store the overlapping range in rangefound
+rangefound <- subsetByOverlaps(hg_chrX, ABCD1)
+
+# Check names of rangefound
+names(rangefound)
+```
+
+```{r}
+# load the human transcripts DB to hg
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+hg <- TxDb.Hsapiens.UCSC.hg38.knownGene
+
+# prefilter chromosome X
+seqlevels(hg) <- c("chrX")
+
+# get all transcripts by gene and print it
+hg_chrXt <- transcriptsBy(hg, by = "gene")
+hg_chrXt
+
+# select gene `215` from the transcripts
+hg_chrXt$`215`
+```
+
+Intro to Shortread
+
+So far, you have been introduced to the `ShortRead` package with useful tools for the initial stages of short-read sequence analysis. As a summary, the main functionalities of this package are **data input, quality assessment, data transformation and access to downstream analysis**. In this context you have been exposed to two different file types: `fasta` and `fastq`.
+They are also used to save the score encodings for each based called which helps to assess the quality of each and all of the reads in a sequence file.
+
+```{r Exploring a fastq file}
+#readFasta() and readFastq(), both need a location and a file pattern to read one or many files.
+
+#FastqSampler() draws a subsample from a fastq file and yield() is the function used to extract the sample from the FastqSampler.
+
+#Exploring a fastq file
+
+# load ShortRead
+library(ShortRead)
+
+# print fqsample
+fqsample
+
+# class of fqsample
+class(fqsample)
+
+# class sread fqsample
+class(sread(fqsample))
+
+# id fqsample
+id(fqsample)
+```
+
+##Exploring sequence quality
+
+```{r Exploring sequence quality}
+# load ShortRead
+library(ShortRead)
+
+# Check quality
+quality(fqsample)
+
+# Check encoding
+encoding(quality(fqsample))
+
+# Check baseQuality
+qaSummary[["baseQuality"]]
+
+#For a quality assessment (QA) summary use qa():
+qaSummary <- qa(fqsample, type = "fastq", lane = 1)
+
+#QA elements can be accessed with - 
+qaSummary[["nameElement"]]
+
+#You can also have a look at a web report using the function:
+browseURL(report(qaSummary))
+```
+
+```{r Example}
+#This exercise uses the complete fastq file SRR1971253 with some pre processing done for you.
+
+library(ShortRead)
+
+fqsample <- readFastq(dirPath = "data", pattern = "SRR1971253.fastq")
+
+abc <- alphabetByCycle(sread(fqsample))
+
+# transpose nucleotides A, C, G, T per column
+nucByCycle <- t(abc[1:4,]) 
+
+# tidy dataset
+nucByCycle <- nucByCycle %>% 
+  as.tibble() %>% # convert to tibble
+  mutate(cycle = 1:50) # add cycle numbers
+
+# glimpse nucByCycle
+glimpse(nucByCycle)
+
+# make an awesome plot!
+nucByCycle %>% 
+  # gather the nucleotide letters in alphabet and get a new count column
+  gather(key = alphabet, value = count , -cycle) %>% 
+  ggplot(aes(x = cycle, y =  count, color = alphabet)) +
+  geom_line(size = 0.5 ) +
+  labs(y = "Frequency") +
+  theme_bw() +
+  theme(panel.grid.major.x = element_blank())
+
+```
+
+```{r}
+library(ShortRead)
+
+# sample with duplicates of class: ShortReadQ
+dfqsample
+
+# get the reads from dfqsample
+mydReads <- sread(dfqsample)
+
+# Counting duplicates TRUE is the number of duplicates
+table(srduplicated(dfqsample))
+
+# Cleaning reads from duplicates x[fun(x)]
+cleanReads <- mydReads[srduplicated(mydReads) == FALSE]
+
+detail(cleanReads)
+
+#Filtering
+myNFilt <- nFilter(threshold = 2)
+```
+
+Rqc is an optimised tool designed for quality control and assessment of high-throughput sequencing data. It performs parallel processing of entire files and produces a report which contains a set of high-resolution graphics.
+
+```{r}
+#Plotting cycle average quality
+#BiocManager::install("Rqc", version = "3.8")
+library(Rqc)
+
+```
+
+
+Install packages from Bioconductor by using the BiocInstaller package.
+Techniques for reading, manipulating and filtering raw genomic data using BioStrings, GenomicRanges and ShortRead.
+To work with BSgenome and TxDb built-in datasets. Then used these to identify patterns by using matching functions.
+Check the quality of sequence files using ShortRead and Rqc.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
